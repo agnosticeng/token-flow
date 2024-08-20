@@ -1,0 +1,72 @@
+[data-kind='headline/h1'] {
+	font-size: 40px;
+	line-height: 48px;
+	font-weight: 500;
+	letter-spacing: -0.5px;
+}
+
+[data-kind='headline/h2'] {
+	font-size: 24px;
+	line-height: 28px;
+	font-weight: 500;
+}
+
+[data-kind='headline/h3'] {
+	font-size: 20px;
+	line-height: 24px;
+	font-weight: 500;
+}
+
+[data-kind='body/regular'] {
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: 400;
+	letter-spacing: 0.25px;
+}
+
+[data-kind='body/accent'] {
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: 500;
+	letter-spacing: 0.25px;
+}
+
+[data-kind='small/regular'] {
+	font-size: 14px;
+	line-height: 20px;
+	font-weight: 400;
+	letter-spacing: 0.2px;
+}
+
+[data-kind='small/accent'] {
+	font-size: 14px;
+	line-height: 20px;
+	font-weight: 500;
+	letter-spacing: 0.3px;
+}
+
+[data-kind='label/regular'] {
+	font-size: 11px;
+	line-height: 12px;
+	font-weight: 400;
+}
+
+[data-kind='label/accent'] {
+	font-size: 11px;
+	line-height: 12px;
+	font-weight: 500;
+}
+
+[data-kind='caption/regular'] {
+	font-size: 12px;
+	line-height: 16px;
+	font-weight: 400;
+	letter-spacing: 0.38px;
+}
+
+[data-kind='caption/accent'] {
+	font-size: 12px;
+	line-height: 16px;
+	font-weight: 500;
+	letter-spacing: 0.38px;
+}
