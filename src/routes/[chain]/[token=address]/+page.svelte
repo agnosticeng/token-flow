@@ -3,6 +3,8 @@
 	import type { ActionReturn } from 'svelte/action';
 	import type { PageData } from './$types';
 	import * as d3 from 'd3';
+	import { page } from '$app/stores';
+	import Canvas from './Canvas.svelte';
 
 	export let data: PageData;
 
@@ -81,15 +83,21 @@
 			);
 		};
 	}
+
+	$: canvas = $page.url.searchParams.has('canvas');
 </script>
 
-<svg viewBox="0 0 100 100" preserveAspectRatio="none" text-anchor="middle">
-	<g fill-opacity="0.7" fill="#6536a3" stroke="#6536a3">
-		{#each nodes as d, i}
-			<circle data-index={i} r={d.r} cx={d.x} cy={d.y} use:dom={applyDrag(d)} />
-		{/each}
-	</g>
-</svg>
+{#if canvas}
+	<Canvas holders={data.holders} />
+{:else}
+	<svg viewBox="0 0 100 100" preserveAspectRatio="none" text-anchor="middle">
+		<g fill-opacity="0.7" fill="#6536a3" stroke="#6536a3">
+			{#each nodes as d, i}
+				<circle data-index={i} r={d.r} cx={d.x} cy={d.y} use:dom={applyDrag(d)} />
+			{/each}
+		</g>
+	</svg>
+{/if}
 
 <style>
 	svg {
