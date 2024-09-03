@@ -7,9 +7,7 @@
 
 		const address = form.get('address');
 
-		if (typeof address === 'string' && isValidAddress(address)) {
-			goto(`/ethereum/${address}`);
-		}
+		if (typeof address === 'string' && isValidAddress(address)) goto(`/ethereum/${address}`);
 	}
 </script>
 
