@@ -3,8 +3,6 @@
 	import type { ActionReturn } from 'svelte/action';
 	import type { PageData } from './$types';
 	import * as d3 from 'd3';
-	import { page } from '$app/stores';
-	import Canvas from './Canvas.svelte';
 
 	export let data: PageData;
 
@@ -55,6 +53,8 @@
 
 	function dragstarted(node: Node): (event: d3.D3DragEvent<Element, unknown, unknown>) => void {
 		return (event) => {
+			if (event.sourceEvent.target instanceof SVGCircleElement)
+				d3.select(event.sourceEvent.target).raise().attr('style', 'cursor: grabbing;');
 			if (!event.active) simulation.alphaTarget(0.3).restart();
 			node.fx = node.x;
 			node.fy = node.y;
@@ -70,6 +70,8 @@
 
 	function dragended(node: Node): (event: d3.D3DragEvent<Element, unknown, unknown>) => void {
 		return (event) => {
+			if (event.sourceEvent.target instanceof SVGCircleElement)
+				d3.select(event.sourceEvent.target).attr('style', null);
 			if (!event.active) simulation.alphaTarget(0);
 			node.fx = null;
 			node.fy = null;
@@ -84,27 +86,52 @@
 		};
 	}
 
-	$: canvas = $page.url.searchParams.has('canvas');
+	let g: SVGGElement;
+
+	const zoom = d3
+		.zoom()
+		.extent([
+			[0, 0],
+			[100, 100]
+		])
+		.scaleExtent([0.2, 4])
+		.on('zoom', ({ transform }) => g.setAttribute('transform', transform));
 </script>
 
-{#if canvas}
-	<Canvas holders={data.holders} />
-{:else}
-	<svg viewBox="0 0 100 100" preserveAspectRatio="none" text-anchor="middle">
-		<g fill-opacity="0.7" fill="#6536a3" stroke="#6536a3">
-			{#each nodes as d, i}
-				<circle data-index={i} r={d.r} cx={d.x} cy={d.y} use:dom={applyDrag(d)} />
-			{/each}
-		</g>
-	</svg>
-{/if}
+<svg
+	viewBox="0 0 100 100"
+	preserveAspectRatio="none"
+	text-anchor="middle"
+	use:dom={(node) => {
+		// @ts-expect-error tototo
+		node.call(zoom);
+	}}
+>
+	<g fill="#6536a3" stroke="#6536a3" bind:this={g}>
+		{#each nodes as d, i}
+			<circle data-index={i} r={d.r} cx={d.x} cy={d.y} use:dom={applyDrag(d)} />
+		{/each}
+	</g>
+</svg>
 
 <style>
 	svg {
 		position: relative;
 		overflow: visible;
-		height: 100%;
-		width: 100%;
+		height: max-content;
+		width: max-content;
+
+		aspect-ratio: 1 / 1;
+
+		& > g > circle {
+			fill-opacity: 0.2;
+
+			&:hover {
+				fill-opacity: 0.8;
+				stroke: #fff;
+				cursor: pointer;
+			}
+		}
 	}
 
 	svg :global(*) {
