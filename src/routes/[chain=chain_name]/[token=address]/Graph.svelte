@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import * as d3 from 'd3';
 	import { selection } from './d3.utils';
 
@@ -9,7 +8,10 @@
 	export let width: number = 100;
 	export let height: number = 100;
 
-	const pack = d3.pack<{ children: Holder[] }>().size([width, height]).padding(3);
+	const pack = d3
+		.pack<{ children: Holder[] }>()
+		.size([width, height])
+		.padding((n) => n.r + 15);
 
 	$: nodes = pack(
 		// @ts-expect-error bad lib typing
@@ -25,13 +27,12 @@
 			'collide',
 			d3
 				.forceCollide<Node>()
-				.radius((d) => d.r + 1)
+				.radius((d) => d.r + 15)
 				.iterations(10)
 		)
-		.force('x', d3.forceX(50))
-		.force('y', d3.forceY(50))
+		.force('x', d3.forceX(width / 2).strength(0.002))
+		.force('y', d3.forceY(height / 2).strength(0.002))
 		.on('tick', () => {
-			if (!browser) return;
 			for (let i = 0; i < nodes.length; i++) {
 				const circle = document.querySelector(`circle[data-index="${i}"]`);
 				if (circle) {
@@ -42,42 +43,35 @@
 			}
 		});
 
-	function dragstarted(node: Node): (event: d3.D3DragEvent<Element, unknown, unknown>) => void {
-		return (event) => {
-			if (event.sourceEvent.target instanceof SVGCircleElement)
-				d3.select(event.sourceEvent.target).raise().attr('style', 'cursor: grabbing;');
-			if (!event.active) simulation.alphaTarget(0.3).restart();
-			node.fx = node.x;
-			node.fy = node.y;
-		};
+	function dragstarted(event: d3.D3DragEvent<Element, unknown, Node>) {
+		if (event.sourceEvent.target instanceof SVGCircleElement)
+			d3.select(event.sourceEvent.target).raise().attr('style', 'cursor: grabbing;');
+		if (!event.active) simulation.alphaTarget(0.3).restart();
+		event.subject.fx = event.subject.x;
+		event.subject.fy = event.subject.y;
 	}
 
-	function dragged(node: Node): (event: d3.D3DragEvent<Element, unknown, unknown>) => void {
-		return (event) => {
-			node.fx = event.x;
-			node.fy = event.y;
-		};
+	function dragged(event: d3.D3DragEvent<Element, unknown, Node>) {
+		event.subject.fx = event.x;
+		event.subject.fy = event.y;
 	}
 
-	function dragended(node: Node): (event: d3.D3DragEvent<Element, unknown, unknown>) => void {
-		return (event) => {
-			if (event.sourceEvent.target instanceof SVGCircleElement)
-				d3.select(event.sourceEvent.target).attr('style', null);
-			if (!event.active) simulation.alphaTarget(0);
-			node.fx = null;
-			node.fy = null;
-		};
+	function dragended(event: d3.D3DragEvent<Element, unknown, Node>) {
+		if (event.sourceEvent.target instanceof SVGCircleElement)
+			d3.select(event.sourceEvent.target).attr('style', null);
+		if (!event.active) simulation.alphaTarget(0);
+		event.subject.fx = null;
+		event.subject.fy = null;
 	}
 
 	function applyDrag(d: Node) {
 		return (node: d3.Selection<Element, unknown, null, undefined>) => {
 			node.call(
-				d3.drag().on('start', dragstarted(d)).on('drag', dragged(d)).on('end', dragended(d))
+				// @ts-expect-error bad typing
+				d3.drag().subject(d).on('start', dragstarted).on('drag', dragged).on('end', dragended)
 			);
 		};
 	}
-
-	let g: SVGGElement;
 
 	$: zoom = d3
 		.zoom()
@@ -87,12 +81,17 @@
 		])
 		.scaleExtent([0.2, 4])
 		.on('zoom', ({ transform }) => g.setAttribute('transform', transform));
+
+	let g: SVGGElement;
+	let svg: SVGElement;
 </script>
 
 <svg
 	viewBox="0 0 {width} {height}"
-	preserveAspectRatio="none"
 	text-anchor="middle"
+	{width}
+	{height}
+	bind:this={svg}
 	use:selection={(node) => {
 		// @ts-expect-error Bad typings
 		node.call(zoom);
@@ -105,9 +104,24 @@
 	</g>
 </svg>
 
+<section>
+	<button
+		on:click={() => {
+			// @ts-expect-error lib bad typing
+			d3.select(svg).call(zoom.scaleBy, 2);
+		}}
+		><div data-kind="body/accent">+</div>
+	</button>
+	<button
+		on:click={() => {
+			// @ts-expect-error lib bad typing
+			d3.select(svg).call(zoom.scaleBy, 0.5);
+		}}><div data-kind="body/accent">-</div></button
+	>
+</section>
+
 <style>
 	svg {
-		position: relative;
 		overflow: visible;
 
 		aspect-ratio: 1 / 1;
@@ -125,5 +139,39 @@
 
 	svg :global(*) {
 		vector-effect: non-scaling-stroke;
+	}
+
+	section {
+		position: absolute;
+		right: 10px;
+		bottom: 10px;
+
+		display: flex;
+		align-items: center;
+
+		gap: 24px;
+
+		& > button {
+			& > div {
+				--lighten-color: hsl(0deg 0% 70% / 38%);
+
+				display: grid;
+				place-items: center;
+
+				border-radius: 8px;
+				height: 30px;
+				aspect-ratio: 1/1;
+				cursor: pointer;
+			}
+
+			&:not(:disabled):hover > div {
+				background-color: hsl(220deg 6% 91% / 100%);
+				color: hsl(0deg 0% 13% / 100%);
+			}
+
+			&:not(:disabled):active > div {
+				background-image: linear-gradient(to right, var(--lighten-color), var(--lighten-color));
+			}
+		}
 	}
 </style>

@@ -13,3 +13,32 @@ export function selection<E extends Element>(
 		}
 	};
 }
+
+export function context2d(
+	canvas: HTMLCanvasElement | null | undefined,
+	width: number,
+	height: number
+) {
+	if (!canvas) return null;
+	const dpi = window.devicePixelRatio;
+	canvas.width = width * dpi;
+	canvas.height = height * dpi;
+	canvas.style.width = width + 'px';
+	canvas.style.height = height + 'px';
+	const context = canvas.getContext('2d');
+	context?.scale(dpi, dpi);
+	return context;
+}
+
+export function ref<T>(initial: T) {
+	let current = initial;
+
+	return {
+		set(next: T) {
+			current = next;
+		},
+		get() {
+			return current;
+		}
+	};
+}

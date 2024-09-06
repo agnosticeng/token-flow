@@ -5,15 +5,4 @@
 
 <SkipLink href="#root" />
 
-<div class="PageWrapper">
-	<slot />
-</div>
-
-<style>
-	.PageWrapper {
-		width: 100%;
-		max-width: 960px;
-		margin: 0 auto;
-		padding: 24px 15px;
-	}
-</style>
+<slot />
