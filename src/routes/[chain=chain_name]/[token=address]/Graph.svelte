@@ -1,21 +1,23 @@
+<script lang="ts" context="module">
+	export type Holder = { wallet: string; amount: number; percent: number };
+</script>
+
 <script lang="ts">
 	import * as d3 from 'd3';
 	import { selection } from './d3.utils';
 
-	type Holder = { wallet: string; amount: number; percent: number };
-
 	export let holders: Holder[];
 	export let width: number = 100;
 	export let height: number = 100;
+	export let selected: Holder | null = null;
 
 	const pack = d3
-		.pack<{ children: Holder[] }>()
+		.pack<Holder>()
 		.size([width, height])
 		.padding((n) => n.r + 15);
 
 	$: nodes = pack(
-		// @ts-expect-error bad lib typing
-		d3.hierarchy({ children: holders }).sum((d) => d.percent)
+		d3.hierarchy({ children: holders } as unknown as Holder).sum((d) => d.percent)
 	).leaves();
 
 	type Node = (typeof nodes)[number] & { fx?: number | null; fy?: number | null };
@@ -51,7 +53,9 @@
 		event.subject.fy = event.subject.y;
 	}
 
+	let hasMoved = false;
 	function dragged(event: d3.D3DragEvent<Element, unknown, Node>) {
+		hasMoved = true;
 		event.subject.fx = event.x;
 		event.subject.fy = event.y;
 	}
@@ -60,6 +64,8 @@
 		if (event.sourceEvent.target instanceof SVGCircleElement)
 			d3.select(event.sourceEvent.target).attr('style', null);
 		if (!event.active) simulation.alphaTarget(0);
+		if (!hasMoved) selected = event.subject.data;
+		hasMoved = false;
 		event.subject.fx = null;
 		event.subject.fy = null;
 	}
@@ -99,7 +105,14 @@
 >
 	<g fill="#6536a3" stroke="#6536a3" bind:this={g}>
 		{#each nodes as d, i}
-			<circle data-index={i} r={d.r} cx={d.x} cy={d.y} use:selection={applyDrag(d)} />
+			<circle
+				data-index={i}
+				r={d.r}
+				cx={d.x}
+				cy={d.y}
+				use:selection={applyDrag(d)}
+				class:Selected={selected === d.data}
+			/>
 		{/each}
 	</g>
 </svg>
@@ -133,6 +146,12 @@
 				fill-opacity: 0.8;
 				stroke: #fff;
 				cursor: pointer;
+			}
+
+			&.Selected {
+				stroke: #fff;
+				stroke-width: 3px;
+				fill-opacity: 0.7;
 			}
 		}
 	}
