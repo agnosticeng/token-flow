@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { truncate } from '$lib/utils/string';
+	import { writable } from 'svelte/store';
 	import type { PageData } from './$types';
 	import Graph, { type Holder } from './Graph.svelte';
+	import { slide, fade } from 'svelte/transition';
 
 	export let data: PageData;
 
@@ -13,51 +15,95 @@
 	function formatPercent(r: number) {
 		return Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 3 }).format(r);
 	}
+
+	const open = writable(false);
 </script>
 
 <svelte:head>
 	<title>{data.token.symbol} TokenFlow</title>
 </svelte:head>
 
-<header>
-	<div>
-		<img src={data.token.logoURI} alt="{data.token.name} 's Icon" />
-		<span data-kind="headline/h3">{data.token.name}</span>
-	</div>
-</header>
-<section bind:clientWidth={width} bind:clientHeight={height}>
-	{#if selected}
-		<article class="Wallet_Details" data-kind="small/regular">
-			<div>
-				<span data-kind="body/accent">Selected Wallet</span>
-				<button on:click={() => (selected = null)}><div data-kind="headline/h3">⛌</div></button>
-			</div>
-			<div>
-				<a
-					target="_blank"
-					rel="noopener noreferrer"
-					data-sveltekit-preload-data="off"
-					aria-label="Explorer address link"
-					href="https://etherscan.io/address/{selected.wallet}">{truncate(selected.wallet, 7)}</a
-				>
-			</div>
-			<div>
-				Wallet Rank: <span data-kind="small/accent">#{data.holders.indexOf(selected) + 1}</span>
-			</div>
-			<div>Percentage: <span data-kind="small/accent">{formatPercent(selected.percent)}</span></div>
-		</article>
-	{/if}
+<div class="PageContainer">
+	<header>
+		<div>
+			<img src={data.token.logoURI} alt="{data.token.name} 's Icon" />
+			<span data-kind="headline/h3">{data.token.name}</span>
+		</div>
+	</header>
 
-	{#if height && width}
-		<Graph holders={data.holders} {height} {width} bind:selected />
+	<section bind:clientWidth={width} bind:clientHeight={height} class:SideBarOpened={$open}>
+		{#if selected}
+			<article class="Wallet_Details" data-kind="small/regular">
+				<div>
+					<span data-kind="body/accent">Selected Wallet</span>
+					<button on:click={() => (selected = null)}><div data-kind="headline/h3">⛌</div></button>
+				</div>
+				<div>
+					<a
+						target="_blank"
+						rel="noopener noreferrer"
+						data-sveltekit-preload-data="off"
+						aria-label="Explorer address link"
+						href="{data.chain_explorer}address/{selected.wallet}">{truncate(selected.wallet, 7)}</a
+					>
+				</div>
+				<div>
+					Wallet Rank: <span data-kind="small/accent">#{data.holders.indexOf(selected) + 1}</span>
+				</div>
+				<div>
+					Percentage: <span data-kind="small/accent">{formatPercent(selected.percent)}</span>
+				</div>
+			</article>
+		{/if}
+
+		<article class="Actions">
+			{#if !$open}
+				<button on:click={() => open.set(true)} in:fade={{ delay: 250, duration: 100 }}>
+					<div>Wallet List</div>
+				</button>
+			{/if}
+		</article>
+
+		{#if height && width}
+			<Graph holders={data.holders} {height} {width} bind:selected />
+		{/if}
+	</section>
+
+	{#if $open}
+		<div class="SideBar" transition:slide={{ duration: 250, axis: 'x' }}>
+			<h3 data-kind="headline/h3">
+				<span>Wallet list</span>
+				<button on:click={() => open.set(false)}><div>⛌</div></button>
+			</h3>
+			<ul>
+				{#each data.holders as holder, i}
+					<li class:Selected={selected === holder}>
+						<button on:click={() => (selected = holder)}>
+							<section>
+								<span data-kind="small/accent">#{i + 1}</span> - {truncate(holder.wallet)}
+							</section>
+							<span data-kind="small/accent">{formatPercent(holder.percent)}</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</div>
 	{/if}
-</section>
+</div>
 
 <style>
+	.PageContainer {
+		--item-background-color: hsl(270deg 14% 12%);
+		--header-height: 64px;
+		--side-bar-width: 300px;
+
+		display: contents;
+	}
+
 	header {
-		height: 64px;
+		height: var(--header-height);
 		width: 100%;
-		background-color: hsl(270deg 14% 12%);
+		background-color: var(--item-background-color);
 		position: relative;
 		z-index: 1;
 		padding: 0 64px;
@@ -91,41 +137,125 @@
 
 		position: relative;
 
+		transition: width 250ms cubic-bezier(0.215, 0.61, 0.355, 1);
+
 		& > article {
 			position: absolute;
-			left: 10px;
-			top: 10px;
-			background-color: hsl(270deg 14% 12%);
+			background-color: var(--item-background-color);
 			border-radius: 8px;
-			padding: 12px;
 
-			& > div:nth-child(1) {
-				display: flex;
-				align-items: center;
-				gap: 12px;
+			&.Wallet_Details {
+				padding: 12px;
+				left: 10px;
+				top: 10px;
+
+				& > div:nth-child(1) {
+					display: flex;
+					align-items: center;
+					gap: 12px;
+				}
+
+				& > div:nth-child(2) {
+					margin-bottom: 5px;
+				}
 			}
 
-			& > div:nth-child(2) {
-				margin-bottom: 5px;
+			&.Actions {
+				right: 10px;
+				top: 10px;
+
+				& > button {
+					& > div {
+						--lighten-color: hsl(0deg 0% 70% / 38%);
+
+						display: grid;
+						place-items: center;
+
+						padding: 0 10px;
+						height: 42px;
+						cursor: pointer;
+						border-radius: 8px;
+						opacity: initial;
+					}
+
+					&:not(:disabled):hover > div {
+						background-color: hsl(220deg 6% 91% / 100%);
+						color: hsl(0deg 0% 13% / 100%);
+					}
+
+					&:not(:disabled):active > div {
+						background-image: linear-gradient(to right, var(--lighten-color), var(--lighten-color));
+					}
+				}
 			}
 		}
 
 		& a {
 			color: hsl(322deg 74% 50%);
 		}
+	}
 
-		& button {
-			& > div {
-				display: grid;
-				place-items: center;
-				cursor: pointer;
+	section.SideBarOpened {
+		width: calc(100% - var(--side-bar-width));
+	}
 
-				opacity: 0.7;
+	.SideBar {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		top: var(--header-height);
+		width: var(--side-bar-width);
+		background-color: var(--item-background-color);
+		overflow: hidden;
+
+		& > h3 {
+			display: flex;
+			align-items: center;
+			padding: 15px;
+			justify-content: space-between;
+			height: 53px;
+		}
+
+		& > ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+
+			height: calc(100% - 53px);
+			overflow-y: auto;
+
+			& > li {
+				& > button {
+					text-align: start;
+					display: flex;
+					justify-content: space-between;
+					padding: 10px 15px;
+					width: 100%;
+					cursor: pointer;
+				}
+
+				&:hover {
+					background-color: hsl(294deg 14% 27%);
+				}
+
+				&.Selected {
+					background-color: hsl(322deg 74% 50%);
+				}
 			}
+		}
+	}
 
-			&:hover > div {
-				opacity: 1;
-			}
+	button {
+		& > div {
+			display: grid;
+			place-items: center;
+			cursor: pointer;
+
+			opacity: 0.7;
+		}
+
+		&:hover > div {
+			opacity: 1;
 		}
 	}
 </style>

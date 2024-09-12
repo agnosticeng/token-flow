@@ -32,9 +32,12 @@ export const load = (async (e) => {
 			body: body<QueryVariables>(query, { token: e.params.token })
 		}).then((r) => r.json<QueryResponse>());
 
+		const { token, chain } = await getInfo(e.params.chain, e.params.token);
+
 		return {
 			holders: transform(response),
-			token: await getTokenInfo(e.params.chain, e.params.token)
+			token,
+			chain_explorer: chain.explorer
 		};
 	} catch (e) {
 		console.error(e);
@@ -56,10 +59,10 @@ function transform({ data }: QueryResponse) {
 	}));
 }
 
-async function getTokenInfo(chain: string, address: `0x${string}`) {
+async function getInfo(chain: string, address: `0x${string}`) {
 	const query = /* GraphQL */ `
-		query Token($input: TokenInput!) {
-			token(input: $input) {
+		query Token($chain: Chain!, $address: Address) {
+			token(input: { chain: $chain, address: $address }) {
 				token {
 					id
 					address
@@ -67,6 +70,17 @@ async function getTokenInfo(chain: string, address: `0x${string}`) {
 					symbol
 					decimals
 					logoURI
+					links {
+						name
+						url
+					}
+				}
+			}
+
+			chain: token(input: { chain: $chain }) {
+				info: token {
+					name
+					explorer
 				}
 			}
 		}
@@ -77,7 +91,7 @@ async function getTokenInfo(chain: string, address: `0x${string}`) {
 		headers: { 'Content-type': 'application/json' },
 		body: JSON.stringify({
 			query,
-			variables: { input: { address, chain: capitalize(chain) } },
+			variables: { address, chain: capitalize(chain) },
 			operationName: 'Token'
 		})
 	}).then((r) =>
@@ -91,13 +105,15 @@ async function getTokenInfo(chain: string, address: `0x${string}`) {
 						symbol: string;
 						decimals: string;
 						logoURI: string;
+						links?: { name: string; url: string }[];
 					};
 				};
+				chain: { info: { name: string; explorer: string } };
 			};
 		}>()
 	);
 
-	return data.token.token;
+	return { token: data.token.token, chain: data.chain.info };
 }
 
 function capitalize(s: string) {
