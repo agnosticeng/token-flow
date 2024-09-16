@@ -44,7 +44,8 @@
 						rel="noopener noreferrer"
 						data-sveltekit-preload-data="off"
 						aria-label="Explorer address link"
-						href="{data.chain_explorer}address/{selected.wallet}">{truncate(selected.wallet, 7)}</a
+						href="{data.chain_explorer}token/{data.token.address}?a={selected.wallet}"
+						>{truncate(selected.wallet, 7)}</a
 					>
 				</div>
 				<div>
@@ -65,7 +66,7 @@
 		</article>
 
 		{#if height && width}
-			<Graph holders={data.holders} {height} {width} bind:selected />
+			<Graph holders={data.holders} transfers={data.transfers} {height} {width} bind:selected />
 		{/if}
 	</section>
 
@@ -225,7 +226,10 @@
 			overflow-y: auto;
 
 			& > li {
-				& > button {
+				display: flex;
+
+				& > button:first-of-type {
+					flex: 1;
 					text-align: start;
 					display: flex;
 					justify-content: space-between;

@@ -4,20 +4,32 @@ import { error } from '@sveltejs/kit';
 
 const query = /* GraphQL */ `
 	query TokenHoldersByTransfers($token: String!) {
-		token_holders_by_transfers(token: $token) {
+		token_holders(token: $token) {
 			wallet
 			amount
 			percent
+		}
+
+		track_transfers_between_holders(token: $token) {
+			source
+			target
+			amount
 		}
 	}
 `;
 
 type QueryResponse = {
 	data?: {
-		token_holders_by_transfers?: {
+		token_holders?: {
 			wallet: string;
 			amount: string;
 			percent: string;
+		}[];
+
+		track_transfers_between_holders?: {
+			source: string;
+			target: string;
+			amount: string;
 		}[];
 	};
 };
@@ -35,7 +47,8 @@ export const load = (async (e) => {
 		const { token, chain } = await getInfo(e.params.chain, e.params.token);
 
 		return {
-			holders: transform(response),
+			holders: get_holders_from_response(response),
+			transfers: get_transfers_from_response(response),
 			token,
 			chain_explorer: chain.explorer
 		};
@@ -49,13 +62,23 @@ function body<T extends object | null | undefined>(query: string, variables?: T)
 	return JSON.stringify({ query, variables });
 }
 
-function transform({ data }: QueryResponse) {
-	if (!data?.token_holders_by_transfers?.length) return [];
+function get_holders_from_response({ data }: QueryResponse) {
+	if (!data?.token_holders?.length) return [];
 
-	return data.token_holders_by_transfers.map((d) => ({
-		wallet: d.wallet,
+	return data.token_holders.map((d) => ({
+		wallet: d.wallet.toLowerCase(),
 		amount: parseFloat(d.amount),
 		percent: parseFloat(d.percent)
+	}));
+}
+
+function get_transfers_from_response({ data }: QueryResponse) {
+	if (!data?.track_transfers_between_holders?.length) return [];
+
+	return data.track_transfers_between_holders.map((t) => ({
+		source: t.source.toLowerCase(),
+		target: t.target.toLowerCase(),
+		amount: parseFloat(t.amount)
 	}));
 }
 

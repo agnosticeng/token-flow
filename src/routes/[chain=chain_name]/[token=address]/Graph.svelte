@@ -1,5 +1,6 @@
 <script lang="ts" context="module">
 	export type Holder = { wallet: string; amount: number; percent: number };
+	export type Transfer = { source: string; target: string; amount: number };
 </script>
 
 <script lang="ts">
@@ -7,6 +8,7 @@
 	import { selection } from './d3.utils';
 
 	export let holders: Holder[];
+	export let transfers: Transfer[];
 	export let width: number = 100;
 	export let height: number = 100;
 	export let selected: Holder | null = null;
@@ -14,26 +16,34 @@
 	const pack = d3
 		.pack<Holder>()
 		.size([width, height])
-		.padding((n) => n.r + 15);
+		.padding((n) => n.r + 50);
 
 	$: nodes = pack(
 		d3.hierarchy({ children: holders } as unknown as Holder).sum((d) => d.percent)
 	).leaves();
 
-	type Node = (typeof nodes)[number] & { fx?: number | null; fy?: number | null };
+	type Node = (typeof nodes)[number] & d3.SimulationNodeDatum;
 
 	$: simulation = d3
 		.forceSimulation(nodes)
 		.velocityDecay(0.1)
 		.force(
-			'collide',
+			'link',
 			d3
-				.forceCollide<Node>()
-				.radius((d) => d.r + 15)
-				.iterations(10)
+				.forceLink(transfers)
+				// @ts-expect-error bad typing
+				.id((d) => d.data.wallet)
+				.distance((r) => {
+					// @ts-expect-error bad typing
+					return r.source.r + r.target.r + 30;
+				})
 		)
-		.force('x', d3.forceX(width / 2).strength(0.002))
-		.force('y', d3.forceY(height / 2).strength(0.002))
+		.force(
+			'charge',
+			d3.forceManyBody<Node>().strength((d) => (d.r + 50) * -1)
+		)
+		.force('x', d3.forceX(width / 2).strength(0.02))
+		.force('y', d3.forceY(height / 2).strength(0.02))
 		.on('tick', () => {
 			for (let i = 0; i < nodes.length; i++) {
 				const circle = document.querySelector(`circle[data-index="${i}"]`);
@@ -41,6 +51,21 @@
 					const d = nodes[i];
 					circle.setAttribute('cx', d.x.toString());
 					circle.setAttribute('cy', d.y.toString());
+				}
+			}
+
+			for (let i = 0; i < transfers.length; i++) {
+				const line = document.querySelector(`line[data-index="${i}"]`);
+				if (line) {
+					const d = transfers[i] as d3.SimulationLinkDatum<Node>;
+					// @ts-expect-error bad typings
+					line.setAttribute('x1', d.source.x);
+					// @ts-expect-error bad typings
+					line.setAttribute('y1', d.source.y);
+					// @ts-expect-error bad typings
+					line.setAttribute('x2', d.target.x);
+					// @ts-expect-error bad typings
+					line.setAttribute('y2', d.target.y);
 				}
 			}
 		});
@@ -70,8 +95,8 @@
 		event.subject.fy = null;
 	}
 
-	function applyDrag(d: Node) {
-		return (node: d3.Selection<Element, unknown, null, undefined>) => {
+	function applyDrag<E extends Element>(d: Node) {
+		return (node: d3.Selection<E, unknown, null, undefined>) => {
 			node.call(
 				// @ts-expect-error bad typing
 				d3.drag().subject(d).on('start', dragstarted).on('drag', dragged).on('end', dragended)
@@ -103,6 +128,19 @@
 		node.call(zoom);
 	}}
 >
+	<defs>
+		<marker
+			id="arrow"
+			markerWidth="8"
+			markerHeight="6"
+			refX="7"
+			refY="3"
+			orient="auto"
+			markerUnits="userSpaceOnUse"
+		>
+			<polygon points="0 0, 8 3, 0 6" fill="#fff" />
+		</marker>
+	</defs>
 	<g fill="#6536a3" stroke="#6536a3" bind:this={g}>
 		{#each nodes as d, i}
 			<circle
@@ -112,6 +150,16 @@
 				cy={d.y}
 				use:selection={applyDrag(d)}
 				class:Selected={selected === d.data}
+			/>
+		{/each}
+
+		{#each transfers as _, i}
+			<line
+				data-index={i}
+				stroke="#fff"
+				stroke-width="1"
+				stroke-opacity="0.6"
+				marker-end="url(#arrow)"
 			/>
 		{/each}
 	</g>
