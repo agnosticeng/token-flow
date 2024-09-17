@@ -1,9 +1,14 @@
 <script lang="ts">
+	import ListBullet from '$lib/components/Icons/ListBullet.svelte';
+	import Square2Stack from '$lib/components/Icons/Square2Stack.svelte';
+	import XMark from '$lib/components/Icons/XMark.svelte';
 	import { truncate } from '$lib/utils/string';
 	import { writable } from 'svelte/store';
+	import { fade, slide } from 'svelte/transition';
 	import type { PageData } from './$types';
 	import Graph, { type Holder } from './Graph.svelte';
-	import { slide, fade } from 'svelte/transition';
+	import Eye from '$lib/components/Icons/Eye.svelte';
+	import EyeSlash from '$lib/components/Icons/EyeSlash.svelte';
 
 	export let data: PageData;
 
@@ -17,6 +22,8 @@
 	}
 
 	const open = writable(false);
+
+	let excluded: string[] = [];
 </script>
 
 <svelte:head>
@@ -36,7 +43,7 @@
 			<article class="Wallet_Details" data-kind="small/regular">
 				<div>
 					<span data-kind="body/accent">Selected Wallet</span>
-					<button on:click={() => (selected = null)}><div data-kind="headline/h3">⛌</div></button>
+					<button on:click={() => (selected = null)}><div><XMark size="18" /></div></button>
 				</div>
 				<div>
 					<a
@@ -46,6 +53,9 @@
 						aria-label="Explorer address link"
 						href="{data.chain_explorer}token/{data.token.address}?a={selected.wallet}"
 						>{truncate(selected.wallet, 7)}</a
+					>
+					<button on:click={() => navigator.clipboard.writeText(selected?.wallet ?? '')}
+						><div><Square2Stack size="18" /></div></button
 					>
 				</div>
 				<div>
@@ -60,13 +70,23 @@
 		<article class="Actions">
 			{#if !$open}
 				<button on:click={() => open.set(true)} in:fade={{ delay: 250, duration: 100 }}>
-					<div>Wallet List</div>
+					<div>
+						<ListBullet size="18" /><span>Wallet List</span>
+					</div>
 				</button>
 			{/if}
 		</article>
 
 		{#if height && width}
-			<Graph holders={data.holders} transfers={data.transfers} {height} {width} bind:selected />
+			<Graph
+				holders={data.holders.filter((h) => !excluded.includes(h.wallet))}
+				transfers={data.transfers.filter(
+					(t) => !excluded.includes(t.source) && !excluded.includes(t.target)
+				)}
+				{height}
+				{width}
+				bind:selected
+			/>
 		{/if}
 	</section>
 
@@ -74,16 +94,39 @@
 		<div class="SideBar" transition:slide={{ duration: 250, axis: 'x' }}>
 			<h3 data-kind="headline/h3">
 				<span>Wallet list</span>
-				<button on:click={() => open.set(false)}><div>⛌</div></button>
+				<button on:click={() => open.set(false)}><div><XMark size="18" /></div></button>
 			</h3>
 			<ul>
 				{#each data.holders as holder, i}
 					<li class:Selected={selected === holder}>
-						<button on:click={() => (selected = holder)}>
-							<section>
+						<button
+							on:click={() => {
+								if (excluded.includes(holder.wallet)) return;
+								selected = holder;
+							}}
+						>
+							<section data-kind="small/regular">
 								<span data-kind="small/accent">#{i + 1}</span> - {truncate(holder.wallet)}
 							</section>
 							<span data-kind="small/accent">{formatPercent(holder.percent)}</span>
+						</button>
+						<button
+							on:click={() => {
+								if (excluded.includes(holder.wallet))
+									excluded = excluded.filter((w) => w !== holder.wallet);
+								else {
+									excluded = excluded.concat(holder.wallet);
+									if (selected === holder) selected = null;
+								}
+							}}
+						>
+							<div>
+								{#if excluded.includes(holder.wallet)}
+									<Eye size="18" />
+								{:else}
+									<EyeSlash size="18" />
+								{/if}
+							</div>
 						</button>
 					</li>
 				{/each}
@@ -158,6 +201,9 @@
 
 				& > div:nth-child(2) {
 					margin-bottom: 5px;
+					display: flex;
+					align-items: center;
+					gap: 8px;
 				}
 			}
 
@@ -169,8 +215,9 @@
 					& > div {
 						--lighten-color: hsl(0deg 0% 70% / 38%);
 
-						display: grid;
-						place-items: center;
+						display: flex;
+						align-items: center;
+						gap: 6px;
 
 						padding: 0 10px;
 						height: 42px;
@@ -236,6 +283,10 @@
 					padding: 10px 15px;
 					width: 100%;
 					cursor: pointer;
+				}
+
+				& > button:not(:first-of-type) {
+					padding: 0 15px;
 				}
 
 				&:hover {

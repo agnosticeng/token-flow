@@ -1,6 +1,8 @@
 <script lang="ts" context="module">
 	export type Holder = { wallet: string; amount: number; percent: number };
 	export type Transfer = { source: string; target: string; amount: number };
+
+	type Node = d3.HierarchyCircularNode<Holder> & d3.SimulationNodeDatum;
 </script>
 
 <script lang="ts">
@@ -16,59 +18,60 @@
 	const pack = d3
 		.pack<Holder>()
 		.size([width, height])
-		.padding((n) => n.r + 50);
+		.padding((n) => n.r + 15);
 
 	$: nodes = pack(
 		d3.hierarchy({ children: holders } as unknown as Holder).sum((d) => d.percent)
 	).leaves();
 
-	type Node = (typeof nodes)[number] & d3.SimulationNodeDatum;
-
-	$: simulation = d3
-		.forceSimulation(nodes)
-		.velocityDecay(0.1)
+	const simulation = d3
+		.forceSimulation<Node, d3.SimulationLinkDatum<Node>>()
 		.force(
 			'link',
 			d3
-				.forceLink(transfers)
-				// @ts-expect-error bad typing
+				.forceLink<Node, d3.SimulationLinkDatum<Node>>()
 				.id((d) => d.data.wallet)
-				.distance((r) => {
-					// @ts-expect-error bad typing
-					return r.source.r + r.target.r + 30;
-				})
+				.distance((r) => (r.source as Node).r + (r.target as Node).r + 50)
 		)
-		.force(
-			'charge',
-			d3.forceManyBody<Node>().strength((d) => (d.r + 50) * -1)
-		)
-		.force('x', d3.forceX(width / 2).strength(0.02))
-		.force('y', d3.forceY(height / 2).strength(0.02))
-		.on('tick', () => {
-			for (let i = 0; i < nodes.length; i++) {
-				const circle = document.querySelector(`circle[data-index="${i}"]`);
-				if (circle) {
-					const d = nodes[i];
-					circle.setAttribute('cx', d.x.toString());
-					circle.setAttribute('cy', d.y.toString());
-				}
-			}
+		.force('charge', d3.forceManyBody())
+		.force('center', d3.forceCenter(width / 2, height / 2).strength(0.002))
+		.on('tick', ticked);
 
-			for (let i = 0; i < transfers.length; i++) {
-				const line = document.querySelector(`line[data-index="${i}"]`);
-				if (line) {
-					const d = transfers[i] as d3.SimulationLinkDatum<Node>;
-					// @ts-expect-error bad typings
-					line.setAttribute('x1', d.source.x);
-					// @ts-expect-error bad typings
-					line.setAttribute('y1', d.source.y);
-					// @ts-expect-error bad typings
-					line.setAttribute('x2', d.target.x);
-					// @ts-expect-error bad typings
-					line.setAttribute('y2', d.target.y);
-				}
+	$: {
+		const old = new Map(simulation.nodes().map((n) => [n.data.wallet, n]));
+		simulation.nodes(nodes.map((n) => Object.assign(n, old.get(n.data.wallet))));
+		simulation
+			.force<d3.ForceLink<Node, d3.SimulationLinkDatum<Node>>>('link')!
+			.links(transfers.map((t) => Object.assign({}, t)));
+		simulation.alpha(1).restart();
+	}
+
+	function ticked() {
+		const nodes = simulation.nodes();
+		for (let i = 0; i < nodes.length; i++) {
+			const circle = document.querySelector(`circle[data-index="${i}"]`);
+			if (circle) {
+				const d = nodes[i];
+				circle.setAttribute('cx', d.x.toString());
+				circle.setAttribute('cy', d.y.toString());
 			}
-		});
+		}
+
+		const links = simulation
+			.force<d3.ForceLink<Node, d3.SimulationLinkDatum<Node>>>('link')!
+			.links();
+
+		for (let i = 0; i < links.length; i++) {
+			const line = document.querySelector(`line[data-index="${i}"]`);
+			if (line) {
+				const d = links[i];
+				line.setAttribute('x1', (d.source as Node).x.toString());
+				line.setAttribute('y1', (d.source as Node).y.toString());
+				line.setAttribute('x2', (d.target as Node).x.toString());
+				line.setAttribute('y2', (d.target as Node).y.toString());
+			}
+		}
+	}
 
 	function dragstarted(event: d3.D3DragEvent<Element, unknown, Node>) {
 		if (event.sourceEvent.target instanceof SVGCircleElement)
@@ -98,8 +101,12 @@
 	function applyDrag<E extends Element>(d: Node) {
 		return (node: d3.Selection<E, unknown, null, undefined>) => {
 			node.call(
-				// @ts-expect-error bad typing
-				d3.drag().subject(d).on('start', dragstarted).on('drag', dragged).on('end', dragended)
+				d3
+					.drag<E, unknown, Node>()
+					.subject(() => d)
+					.on('start', dragstarted)
+					.on('drag', dragged)
+					.on('end', dragended)
 			);
 		};
 	}
@@ -142,26 +149,29 @@
 		</marker>
 	</defs>
 	<g fill="#6536a3" stroke="#6536a3" bind:this={g}>
-		{#each nodes as d, i}
-			<circle
-				data-index={i}
-				r={d.r}
-				cx={d.x}
-				cy={d.y}
-				use:selection={applyDrag(d)}
-				class:Selected={selected === d.data}
-			/>
-		{/each}
-
-		{#each transfers as _, i}
-			<line
-				data-index={i}
-				stroke="#fff"
-				stroke-width="1"
-				stroke-opacity="0.6"
-				marker-end="url(#arrow)"
-			/>
-		{/each}
+		<g class="circles">
+			{#each nodes as d, i (d.data.wallet)}
+				<circle
+					data-index={i}
+					r={d.r}
+					cx={d.x}
+					cy={d.y}
+					use:selection={applyDrag(d)}
+					class:Selected={selected === d.data}
+				/>
+			{/each}
+		</g>
+		<g class="lines">
+			{#each transfers as _, i}
+				<line
+					data-index={i}
+					stroke="#fff"
+					stroke-width="1"
+					stroke-opacity="0.6"
+					marker-end="url(#arrow)"
+				/>
+			{/each}
+		</g>
 	</g>
 </svg>
 
@@ -187,7 +197,7 @@
 
 		aspect-ratio: 1 / 1;
 
-		& > g > circle {
+		& g.circles > circle {
 			fill-opacity: 0.2;
 
 			&:hover {

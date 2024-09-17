@@ -75,11 +75,13 @@ function get_holders_from_response({ data }: QueryResponse) {
 function get_transfers_from_response({ data }: QueryResponse) {
 	if (!data?.track_transfers_between_holders?.length) return [];
 
-	return data.track_transfers_between_holders.map((t) => ({
-		source: t.source.toLowerCase(),
-		target: t.target.toLowerCase(),
-		amount: parseFloat(t.amount)
-	}));
+	return data.track_transfers_between_holders
+		.map((t) => ({
+			source: t.source.toLowerCase(),
+			target: t.target.toLowerCase(),
+			amount: parseFloat(t.amount)
+		}))
+		.filter((t) => t.source !== t.target);
 }
 
 async function getInfo(chain: string, address: `0x${string}`) {
