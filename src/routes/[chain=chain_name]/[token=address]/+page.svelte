@@ -1,14 +1,16 @@
 <script lang="ts">
-	import ListBullet from '$lib/components/Icons/ListBullet.svelte';
-	import Square2Stack from '$lib/components/Icons/Square2Stack.svelte';
-	import XMark from '$lib/components/Icons/XMark.svelte';
 	import { truncate } from '$lib/utils/string';
 	import { writable } from 'svelte/store';
 	import { fade, slide } from 'svelte/transition';
 	import type { PageData } from './$types';
 	import Graph, { type Holder } from './Graph.svelte';
-	import Eye from '$lib/components/Icons/Eye.svelte';
-	import EyeSlash from '$lib/components/Icons/EyeSlash.svelte';
+	import {
+		Eye,
+		EyeSlash,
+		ListBullet,
+		Square2Stack,
+		XMark
+	} from '@agnosticeng/heroicons-svelte/outline';
 
 	export let data: PageData;
 
