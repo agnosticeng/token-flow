@@ -161,7 +161,7 @@
 				/>
 			{/each}
 		</g>
-		<g class="lines">
+		<g class="lines" pointer-events="none">
 			{#each transfers as _, i}
 				<line
 					data-index={i}
