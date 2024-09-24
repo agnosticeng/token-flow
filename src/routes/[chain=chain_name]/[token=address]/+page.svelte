@@ -46,6 +46,13 @@
 				<div>
 					<span data-kind="body/accent">Selected Wallet</span>
 					<button on:click={() => (selected = null)}><div><XMark size="18" /></div></button>
+					<button
+						on:click={() => {
+							if (!selected) return;
+							excluded = excluded.concat(selected.wallet);
+							selected = null;
+						}}><div><EyeSlash size="18" /></div></button
+					>
 				</div>
 				<div>
 					<a
@@ -100,7 +107,7 @@
 			</h3>
 			<ul>
 				{#each data.holders as holder, i}
-					<li class:Selected={selected === holder}>
+					<li class:Selected={selected === holder} class:Hidden={excluded.includes(holder.wallet)}>
 						<button
 							on:click={() => {
 								if (excluded.includes(holder.wallet)) return;
@@ -297,6 +304,10 @@
 
 				&.Selected {
 					background-color: hsl(322deg 74% 50%);
+				}
+
+				&.Hidden {
+					opacity: 0.4;
 				}
 			}
 		}
