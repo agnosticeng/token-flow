@@ -156,7 +156,9 @@
 		--header-height: 64px;
 		--side-bar-width: 300px;
 
-		display: contents;
+		width: 100%;
+		height: 100%;
+		overflow: hidden;
 	}
 
 	header {

@@ -132,7 +132,6 @@
 
 <svg
 	viewBox="0 0 {width} {height}"
-	text-anchor="middle"
 	{width}
 	{height}
 	bind:this={svg}
@@ -154,8 +153,8 @@
 			<polygon points="0 0, 8 3, 0 6" fill="#fff" />
 		</marker>
 	</defs>
-	<g fill="#6536a3" stroke="#6536a3" bind:this={g}>
-		<g class="circles">
+	<g bind:this={g}>
+		<g class="circles" fill="#6536a3" stroke="#6536a3">
 			{#each nodes as d, i (d.data.wallet)}
 				<circle
 					data-index={i}
@@ -199,10 +198,6 @@
 
 <style>
 	svg {
-		overflow: visible;
-
-		aspect-ratio: 1 / 1;
-
 		& g.circles > circle {
 			fill-opacity: 0.2;
 
@@ -218,10 +213,6 @@
 				fill-opacity: 0.7;
 			}
 		}
-	}
-
-	svg :global(*) {
-		vector-effect: non-scaling-stroke;
 	}
 
 	section {
