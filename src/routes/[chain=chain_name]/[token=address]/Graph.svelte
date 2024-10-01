@@ -1,5 +1,11 @@
 <script lang="ts" context="module">
-	export type Holder = { wallet: string; amount: number; percent: number };
+	export type Holder = {
+		wallet: string;
+		amount: number;
+		percent: number;
+		name: string | undefined;
+		labels: string[] | undefined;
+	};
 	export type Transfer = { source: string; target: string; amount: number };
 
 	type Node = d3.HierarchyCircularNode<Holder> & d3.SimulationNodeDatum;

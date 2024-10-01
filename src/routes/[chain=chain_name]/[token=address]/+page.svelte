@@ -61,7 +61,7 @@
 						data-sveltekit-preload-data="off"
 						aria-label="Explorer address link"
 						href="{data.chain_explorer}token/{data.token.address}?a={selected.wallet}"
-						>{truncate(selected.wallet, 7)}</a
+						>{selected?.name ?? truncate(selected.wallet, 7)}</a
 					>
 					<button on:click={() => navigator.clipboard.writeText(selected?.wallet ?? '')}
 						><div><Square2Stack size="18" /></div></button
@@ -73,6 +73,11 @@
 				<div>
 					Percentage: <span data-kind="small/accent">{formatPercent(selected.percent)}</span>
 				</div>
+				{#if selected.labels}
+					<div>
+						Labels: <span data-kind="small/accent">{selected.labels}</span>
+					</div>
+				{/if}
 			</article>
 		{/if}
 
@@ -115,7 +120,8 @@
 							}}
 						>
 							<section data-kind="small/regular">
-								<span data-kind="small/accent">#{i + 1}</span> - {truncate(holder.wallet)}
+								<span data-kind="small/accent">#{i + 1}</span> - {holder.name ??
+									truncate(holder.wallet)}
 							</section>
 							<span data-kind="small/accent">{formatPercent(holder.percent)}</span>
 						</button>

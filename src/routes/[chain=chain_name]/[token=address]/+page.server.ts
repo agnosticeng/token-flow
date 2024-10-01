@@ -1,9 +1,10 @@
 import type { PageServerLoad } from './$types';
-import { AGNOSTIC_TOKEN } from '$env/static/private';
 import { error } from '@sveltejs/kit';
+import { graphql } from '$lib/server/graphql';
+import { labels_loader } from '$lib/server/database';
 
 const query = /* GraphQL */ `
-	query TokenHoldersByTransfers($token: String!) {
+	query TokenHoldersWithTransfers($token: String!) {
 		token_holders(token: $token) {
 			wallet
 			amount
@@ -19,36 +20,39 @@ const query = /* GraphQL */ `
 `;
 
 type QueryResponse = {
-	data?: {
-		token_holders?: {
-			wallet: string;
-			amount: string;
-			percent: string;
-		}[];
+	token_holders?: {
+		wallet: string;
+		amount: string;
+		percent: string;
+	}[];
 
-		track_transfers_between_holders?: {
-			source: string;
-			target: string;
-			amount: string;
-		}[];
-	};
+	track_transfers_between_holders?: {
+		source: string;
+		target: string;
+		amount: string;
+	}[];
 };
 
 type QueryVariables = { token: string };
 
 export const load = (async (e) => {
 	try {
-		const response = await fetch('https://graphql.eu-west-1.agnostic.engineering/graphql', {
-			method: 'POST',
-			headers: { Authorization: AGNOSTIC_TOKEN },
-			body: body<QueryVariables>(query, { token: e.params.token })
-		}).then((r) => r.json<QueryResponse>());
+		const [{ data, errors }, { token, chain }] = await Promise.all([
+			graphql<QueryResponse, QueryVariables>(
+				query,
+				{ token: e.params.token },
+				'TokenHoldersWithTransfers'
+			),
+			getInfo(e.params.chain, e.params.token)
+		]);
 
-		const { token, chain } = await getInfo(e.params.chain, e.params.token);
+		if (!data) throw errors;
+
+		const holders = await get_holders_from_query_response(data);
 
 		return {
-			holders: get_holders_from_response(response),
-			transfers: get_transfers_from_response(response),
+			holders,
+			transfers: get_transfers_from_query_response(data),
 			token,
 			chain_explorer: chain.explorer
 		};
@@ -58,30 +62,29 @@ export const load = (async (e) => {
 	}
 }) satisfies PageServerLoad;
 
-function body<T extends object | null | undefined>(query: string, variables?: T) {
-	return JSON.stringify({ query, variables });
+function get_holders_from_query_response(data: QueryResponse) {
+	return Promise.all(
+		data?.token_holders?.map(async (d) => {
+			const { name, labels } = await labels_loader.load(d.wallet);
+			return {
+				wallet: d.wallet.toLowerCase(),
+				amount: parseFloat(d.amount),
+				percent: parseFloat(d.percent),
+				name,
+				labels
+			};
+		}) ?? []
+	);
 }
 
-function get_holders_from_response({ data }: QueryResponse) {
-	if (!data?.token_holders?.length) return [];
-
-	return data.token_holders.map((d) => ({
-		wallet: d.wallet.toLowerCase(),
-		amount: parseFloat(d.amount),
-		percent: parseFloat(d.percent)
-	}));
-}
-
-function get_transfers_from_response({ data }: QueryResponse) {
+function get_transfers_from_query_response(data: QueryResponse) {
 	if (!data?.track_transfers_between_holders?.length) return [];
 
-	return data.track_transfers_between_holders
-		.map((t) => ({
-			source: t.source.toLowerCase(),
-			target: t.target.toLowerCase(),
-			amount: parseFloat(t.amount)
-		}))
-		.filter((t) => t.source !== t.target);
+	return data.track_transfers_between_holders.map((t) => ({
+		source: t.source.toLowerCase(),
+		target: t.target.toLowerCase(),
+		amount: parseFloat(t.amount)
+	}));
 }
 
 async function getInfo(chain: string, address: `0x${string}`) {
