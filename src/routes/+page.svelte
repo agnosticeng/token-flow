@@ -11,7 +11,11 @@
 	}
 </script>
 
-<h1 data-kind="headline/h1">Welcome to TokenFlow by Agnostic</h1>
+<svelte:head>
+	<title>TokenFlow by Agnostic</title>
+</svelte:head>
+
+<h1 data-kind="headline/h1">TokenFlow by Agnostic</h1>
 
 <form on:submit|preventDefault={handleSubmit} autocomplete="off">
 	<h2 data-kind="headline/h3">Search for token</h2>
@@ -70,6 +74,7 @@
 				border-radius: 8px;
 				border: 1px solid hsl(0deg 0% 0% / 10%);
 				outline: none;
+				background-color: inherit;
 			}
 		}
 
