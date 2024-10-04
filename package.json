@@ -2,6 +2,10 @@
 	"name": "token-flow",
 	"version": "0.0.1",
 	"private": true,
+	"author": {
+		"name": "Yann AMSELLEM",
+		"url": "https://github.com/yannamsellem"
+	},
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
