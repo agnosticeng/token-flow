@@ -94,7 +94,7 @@ query TokenHoldersWithTransfers($token: String!) {
 For a detailed explanation of how the project works and how we used Agnostic’s API, check out our two-part article series:
 
 - [Unlocking Token Secrets: Mapping Out Top Holders and Transfers - Part 1](https://medium.com/agnosticeng/unlocking-token-secrets-mapping-out-top-holders-and-transfers-part-1-32ac7a0cae0a)
-- [Unlocking Token Secrets: Mapping Out Top Holders and Transfers  -  Part 2](#)
+- [Unlocking Token Secrets: Mapping Out Top Holders and Transfers  -  Part 2](https://medium.com/agnosticeng/unlocking-token-secrets-mapping-out-top-holders-and-transfers-part-2-5c900c8e9f0a)
 
 ## Contributing
 
