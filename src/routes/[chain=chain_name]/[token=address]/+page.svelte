@@ -26,6 +26,8 @@
 	const open = writable(false);
 
 	let excluded: string[] = [];
+
+	$: if (selected) open.set(true);
 </script>
 
 <svelte:head>
